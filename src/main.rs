@@ -3,6 +3,8 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::net::{TcpListener, TcpStream};
 
+use regex::Regex;
+
 use colored::*;
 
 fn print_warning(msg: &str) {
@@ -13,14 +15,31 @@ fn print_info(msg: &str) {
     println!("{}", msg.blue());
 }
 
-fn send_200_response(mut stream: TcpStream, filepath: &str) {
-    let content = fs::read_to_string(filepath).unwrap();
+fn send_response(mut stream: TcpStream, get_request: &HttpGetRequest) {
+    let filepath_root_prefix = Regex::new("^/").unwrap();
 
-    let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-        content.len(),
-        content
-    );
+    let result = filepath_root_prefix.replace(&get_request.request_uri, "./");
+    let filepath = result.to_string();
+
+    print_info(&("responding with content from: ".to_owned() + &get_request.request_uri));
+
+    let response = match fs::read_to_string(filepath) {
+        Ok(content) => {
+            format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+                content.len(),
+                content
+            )
+        }
+        _ => {
+            let content = fs::read_to_string("404.html").unwrap();
+            format!(
+                "HTTP/1.1 404 NOT FOUND\r\nContent-Length: {}\r\n\r\n{}",
+                content.len(),
+                content
+            )
+        }
+    };
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
@@ -76,9 +95,9 @@ fn handle_connection(stream: TcpStream) {
 
     let request = read_request_from(&stream);
     match request {
-        Some(HttpRequest::Get(_get_request)) => {
+        Some(HttpRequest::Get(get_request)) => {
             print_info("received get request");
-            send_200_response(stream, "hello.html");
+            send_response(stream, &get_request);
             print_info("connection closed");
         }
         Some(_) => print_warning("unhandlable request type"),
