@@ -22,5 +22,7 @@ fn main() {
             }
             print!("{}", String::from_utf8_lossy(&buf[..]));
         }
+        println!();
+        print_info("connection closed");
     }
 }
