@@ -1,6 +1,12 @@
 use std::io::prelude::*;
 use std::net::TcpListener;
 
+use colored::*;
+
+fn print_info(msg: &str) {
+    println!("{}", msg.blue());
+}
+
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
 
