@@ -15,6 +15,7 @@ fn handle_connection(mut stream: TcpStream) {
             break;
         }
         print!("{}", String::from_utf8_lossy(&buf[..]));
+        buf = [0; 512]; // zero out buffer
     }
     println!();
     print_info("connection closed");
