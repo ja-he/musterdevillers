@@ -1,4 +1,5 @@
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::net::{TcpListener, TcpStream};
 
 use colored::*;
@@ -29,12 +30,29 @@ fn send_default_response(mut stream: TcpStream) {
     stream.flush().unwrap();
 }
 
-fn handle_connection(mut stream: TcpStream) {
+fn get_linewise_til_crlfcrlf(stream: &TcpStream) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut reader = BufReader::new(stream.try_clone().unwrap());
+
+    let mut line = String::new();
+    while reader.read_line(&mut line).unwrap() > 0 {
+        line = line.trim().to_string();
+        if line.is_empty() {
+            break;
+        }
+        lines.push(line.clone());
+        line = String::from("")
+    }
+
+    return lines;
+}
+
+fn handle_connection(stream: TcpStream) {
     print_info("connection established");
-    let mut buf: [u8; 4096] = [0; 4096];
-    stream.read(&mut buf).unwrap();
-    print!("{}", String::from_utf8_lossy(&buf[..]));
-    println!();
+
+    for line in get_linewise_til_crlfcrlf(&stream).iter() {
+        println!("{}", line);
+    }
 
     print_info("responding...");
 
