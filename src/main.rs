@@ -1,3 +1,4 @@
+use std::fs;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::net::{TcpListener, TcpStream};
@@ -12,23 +13,13 @@ fn print_info(msg: &str) {
     println!("{}", msg.blue());
 }
 
-fn send_default_response(mut stream: TcpStream) {
-    let default_content = r#"<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Musterdevillers</title>
-  </head>
-  <body>
-    <h1>Hello</h1>
-    <p>Hi from Musterdevillers!</p>
-  </body>
-</html>"#;
+fn send_200_response(mut stream: TcpStream, filepath: &str) {
+    let content = fs::read_to_string(filepath).unwrap();
 
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-        default_content.len(),
-        default_content
+        content.len(),
+        content
     );
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
@@ -87,7 +78,7 @@ fn handle_connection(stream: TcpStream) {
     match request {
         Some(HttpRequest::Get(_get_request)) => {
             print_info("received get request");
-            send_default_response(stream);
+            send_200_response(stream, "hello.html");
             print_info("connection closed");
         }
         Some(_) => print_warning("unhandlable request type"),
