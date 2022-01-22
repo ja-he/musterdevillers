@@ -13,7 +13,7 @@ fn main() {
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
 
-        println!("connection established");
+        print_info("connection established");
 
         let mut buf: [u8; 512] = [0; 512];
         while let Ok(bytes_read) = stream.read(&mut buf) {
