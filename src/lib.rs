@@ -26,6 +26,7 @@ impl ThreadPuddle {
     where
         F: FnOnce() + Send + 'static,
     {
+        self.sender.send(Box::new(f)).expect("could not send job");
     }
 }
 
