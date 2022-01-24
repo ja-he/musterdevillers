@@ -109,10 +109,11 @@ fn handle_connection(stream: TcpStream) {
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+    let puddle = ThreadPuddle::new(8);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
 
-        std::thread::spawn(|| handle_connection(stream));
+        puddle.execute(|| handle_connection(stream));
     }
 }
