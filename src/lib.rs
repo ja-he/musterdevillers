@@ -6,15 +6,19 @@ use std::thread;
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct ThreadPuddle {
+    sender: mpsc::Sender<Job>,
     threads: Vec<Worker>,
 }
 
 impl ThreadPuddle {
     pub fn new(n: usize) -> ThreadPuddle {
         assert!(n > 0);
+        let (sender, receiver) = mpsc::channel();
+        let receiver = Arc::new(Mutex::new(receiver));
 
         ThreadPuddle {
             threads: (0..n).map(|_| Worker::new(Arc::clone(&receiver))).collect(),
+            sender,
         }
     }
 
