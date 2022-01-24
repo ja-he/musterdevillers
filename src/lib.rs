@@ -6,7 +6,7 @@ use std::thread;
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct ThreadPuddle {
-    threads: Vec<thread::JoinHandle<()>>,
+    threads: Vec<Worker>,
 }
 
 impl ThreadPuddle {
@@ -14,7 +14,7 @@ impl ThreadPuddle {
         assert!(n > 0);
 
         ThreadPuddle {
-            threads: (0..n).map(|_| {thread::spawn(||{})}).collect(),
+            threads: (0..n).map(|_| Worker::new(Arc::clone(&receiver))).collect(),
         }
     }
 
