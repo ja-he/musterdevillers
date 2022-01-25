@@ -5,9 +5,14 @@ use std::thread;
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
+enum Instruction {
+    Execute(Job),
+    Terminate,
+}
+
 pub struct ThreadPuddle {
-    sender: mpsc::Sender<Job>,
-    threads: Vec<Worker>,
+    sender: mpsc::Sender<Instruction>,
+    workers: Vec<Worker>,
 }
 
 impl ThreadPuddle {
@@ -17,7 +22,7 @@ impl ThreadPuddle {
         let receiver = Arc::new(Mutex::new(receiver));
 
         ThreadPuddle {
-            threads: (0..n).map(|_| Worker::new(Arc::clone(&receiver))).collect(),
+            workers: (0..n).map(|_| Worker::new(Arc::clone(&receiver))).collect(),
             sender,
         }
     }
@@ -26,21 +31,40 @@ impl ThreadPuddle {
     where
         F: FnOnce() + Send + 'static,
     {
-        self.sender.send(Box::new(f)).expect("could not send job");
+        self.sender
+            .send(Instruction::Execute(Box::new(f)))
+            .expect("could not send job");
+    }
+}
+
+impl Drop for ThreadPuddle {
+    fn drop(&mut self) {
+        for _ in &mut self.workers {
+            self.sender
+                .send(Instruction::Terminate)
+                .expect("could not send termination instruction");
+        }
+
+        for worker in &mut self.workers {
+            worker.thread.take().unwrap().join().unwrap();
+        }
     }
 }
 
 struct Worker {
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new(receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(move || loop {
-            let job = receiver.lock().unwrap().recv().unwrap();
-            job();
-        });
-
-        Worker { thread }
+    fn new(receiver: Arc<Mutex<mpsc::Receiver<Instruction>>>) -> Worker {
+        Worker {
+            thread: Some(thread::spawn(move || loop {
+                let instruction = receiver.lock().unwrap().recv().unwrap();
+                match instruction {
+                    Instruction::Execute(job) => job(),
+                    Instruction::Terminate => break,
+                }
+            })),
+        }
     }
 }
