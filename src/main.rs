@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::net::{TcpListener, TcpStream};
 
-use musterdevillers::ThreadPuddle;
+use threadpuddle::ThreadPuddle;
 
 use regex::Regex;
 
